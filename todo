@@ -1,0 +1,187 @@
+#!/bin/bash
+#Takes in a single string and opt other e.g. priority
+#and with no args it prints todo list
+numberRegex='^[0-9]+$'
+pattern="+++"
+DEFAULTPRIORITY="NORMAL"
+PRIORITYIN=2
+
+RUNTHEREST=1
+
+file="$HOME/.todo"
+transfile="$HOME/.tododel"
+colr="\033[37;45m"
+reset="\033[0m"
+#IFS='+++' read -ra ADDR <<< "$sometxt#"
+#arrIN=(${sometxt//+++/ })
+#for i in "${arrIN[@]}"; do
+#    # process "$i"
+#	echo $i#åå
+#done
+#
+#So idea is
+#there is also a delete/done option -d
+#you can also pass priority through with message
+function completedTask(){
+	echo "Completed... $1"
+	if [[ $1 =~ $numberRegex ]] ; then
+		internalcount=0
+		while IFS='' read -r line || [[ -n "$line" ]]; do
+			body=${line#*$pattern}
+			body=${body%$pattern*}
+			num=${line%%$pattern*}
+			pri=${line##*$pattern}
+			priStr=$(returnPriorityStatus $pri)
+			if [[ $num == $1 ]]; then
+				echo "Deleting ... "
+				echo -e "$colr $num $reset:$priStr $body"
+			else
+				if ! [[ -z "$line" ]]; then
+					echo "$internalcount+++$body+++$pri" >> $transfile
+					internalcount=$((internalcount + 1))
+				fi
+			fi
+		done < "$file"
+	else
+		internalcount=0
+		while IFS='' read -r line || [[ -n "$line" ]]; do
+			body=${line#*$pattern}
+			body=${body%$pattern*}
+			num=${line%%$pattern*}
+			pri=${line##*$pattern}
+			priStr=$(returnPriorityStatus $pri)
+			if [[ $body =~ $1 ]]; then
+				echo "REG Deleting ... "
+				echo -e "$colr $num $reset:$priStr $body"
+			else
+				if ! [[ -z "$line" ]]; then
+					echo "$internalcount+++$body+++$pri" >> $transfile
+					internalcount=$((internalcount + 1))
+				fi
+			fi
+		done < "$file"
+	fi
+	if [[ -f  $transfile ]]; then
+		cat $transfile > "$file"
+		rm $transfile
+	else
+		> "$file"
+	fi
+}
+
+function generateNum(){
+	numberOfLines=$(wc -l < $file)
+	echo $numberOfLines
+}
+
+function consumePriority(){
+	if [[ $1 =~ $numberRegex ]] ; then
+		if [[ $1 -le 3 ]] ; then
+			PRIORITYIN=$1
+		else
+			echo "Thats error"
+			exit 1
+		fi
+	else
+		case "$1"
+		in
+		h|high|H|HIGH)
+			PRIORITYIN=1
+			;;
+		n|norm|normal|N|NORM|NORMAL)
+			PRIORITYIN=2
+			;;
+		l|low|L|LOW)
+			PRIORITYIN=3
+			;;
+		*)
+			echo "Thats error"
+			exit 1
+			;;
+		esac
+	fi
+}
+
+function clearAllTodos(){
+	> "$file"
+}
+
+function returnPriorityStatus(){
+	outStr=$DEFAULTPRIORITY
+	if [[ $1 == "1" ]];
+	then
+		outStr="\033[37;41m HIGH \033[0m"
+	elif [[ $1 == "2" ]];
+	then
+		outStr="\033[37;44m NORMAL \033[0m"
+	else
+		outStr="\033[30;42m LOW \033[0m"
+	fi
+	echo $outStr
+}	
+
+while getopts d:r:ep:h option
+do
+case "${option}"
+in
+d)
+	completedTask ${OPTARG}
+	exit 0
+	;;
+r)
+	completedTask ${OPTARG}
+	exit 0
+	;;
+e)
+	echo "EMPTYING LIST"
+	clearAllTodos
+	exit 0
+	;;
+p)
+	consumePriority ${OPTARG}
+	;;
+h)
+	echo "HELP"
+	exit 0
+	;;
+*)
+	echo "Error unknown parameter!"
+	exit 1
+;;
+esac
+done
+shift $((OPTIND-1)) #This pushes the parameters out the way and lets the positional parameters play ball
+
+if [[ $RUNTHEREST -eq 1 ]]; then
+	if [[ -z "$1" ]]; 
+	then
+		linecount=$(generateNum)
+		if [[ -a $file ]] && [[ $linecount -gt 0 ]];
+		then
+			echo -e "$colr    TODOs... $reset"
+			while IFS='' read -r line || [[ -n "$line" ]]; do
+				body=${line#*$pattern}
+				body=${body%$pattern*}
+				num=${line%%$pattern*}
+				pri=${line##*$pattern}
+				priStr=$(returnPriorityStatus $pri)
+				echo -e "$colr $num $reset:$priStr $body"
+			done < "$file"
+		else
+			echo -e "\033[37;44m EMPTY TODOs \033[0m"
+		fi
+	else
+		#echo "Adding to todo list..."
+		#echo "$1"
+		if [[ -a $file ]];
+		then
+			numberNow=$(generateNum) #that number becomes the id
+			echo "$numberNow+++$1+++$PRIORITYIN" >> "$file"
+		else
+			#File does not exist
+			touch "$file"
+			echo "0+++$1+++$PRIORITYIN" > "$file"
+		fi
+		echo "Added to the list..."
+	fi
+fi
