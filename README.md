@@ -22,9 +22,16 @@ Priority options (-p):
 - l low L LOW OR 3
 
 ```
-todo -e
+todo -e 1
 ```
-will *EMPTY* the entire todo list **BE CAREFUL!**
+will *EDIT* the selected todo item with the matching ID
+
+It will trigger a user interactive edit, where the user can change the description and the priority when prompted.
+
+```
+todo -r
+```
+will *REMOVE ALL* the entire todo list **BE CAREFUL!**
 
 ```
 todo -d 0

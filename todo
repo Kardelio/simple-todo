@@ -6,22 +6,55 @@ pattern="+++"
 DEFAULTPRIORITY="NORMAL"
 PRIORITYIN=2
 
-RUNTHEREST=1
-
 file="$HOME/.todo"
 transfile="$HOME/.tododel"
 colr="\033[37;45m"
 reset="\033[0m"
-#IFS='+++' read -ra ADDR <<< "$sometxt#"
-#arrIN=(${sometxt//+++/ })
-#for i in "${arrIN[@]}"; do
-#    # process "$i"
-#	echo $i#åå
-#done
-#
-#So idea is
-#there is also a delete/done option -d
-#you can also pass priority through with message
+
+function editTicket(){
+	echo "Editing... $1"
+	if [[ $1 =~ $numberRegex ]] ; then
+		internalcount=0
+		while IFS='' read -r line || [[ -n "$line" ]]; do
+			body=${line#*$pattern}
+			body=${body%$pattern*}
+			num=${line%%$pattern*}
+			pri=${line##*$pattern}
+			priStr=$(returnPriorityStatus $pri)
+			if [[ $num == $1 ]]; then
+				echo "Editing a ... "
+				echo -e "$colr $num $reset:$priStr $body"
+				#Edit...
+				echo "Type the new text for the todo item... (leave blank to not change)"
+				read bodyNew </dev/tty
+				if ! [[ -z $bodyNew ]]; then
+					body=$bodyNew
+				fi
+				echo "Type priority for the todo item... (leave blank to not change)"
+				read priNew </dev/tty
+				if ! [[ -z $priNew ]]; then
+					consumePriority $priNew
+				fi
+				echo "$internalcount+++$body+++$PRIORITYIN" >> $transfile
+			else
+				if ! [[ -z "$line" ]]; then
+					echo "$internalcount+++$body+++$pri" >> $transfile
+				fi
+			fi
+			internalcount=$((internalcount + 1))
+		done < "$file"
+
+		if [[ -f  $transfile ]]; then
+			cat $transfile > "$file"
+			rm $transfile
+		else
+			> "$file"
+		fi
+	else
+		echo "Only editing using the items ID is enabled at the moment..."
+	fi
+}
+
 function completedTask(){
 	echo "Completed... $1"
 	if [[ $1 =~ $numberRegex ]] ; then
@@ -120,7 +153,7 @@ function returnPriorityStatus(){
 	echo $outStr
 }	
 
-while getopts d:r:ep:h option
+while getopts d:re:p:h option
 do
 case "${option}"
 in
@@ -129,12 +162,12 @@ d)
 	exit 0
 	;;
 r)
-	completedTask ${OPTARG}
+	echo "REMOVING ALL TODOs"
+	clearAllTodos
 	exit 0
 	;;
 e)
-	echo "EMPTYING LIST"
-	clearAllTodos
+	editTicket ${OPTARG}
 	exit 0
 	;;
 p)
@@ -152,36 +185,31 @@ esac
 done
 shift $((OPTIND-1)) #This pushes the parameters out the way and lets the positional parameters play ball
 
-if [[ $RUNTHEREST -eq 1 ]]; then
-	if [[ -z "$1" ]]; 
+if [[ -z "$1" ]]; 
+then
+	linecount=$(generateNum)
+	if [[ -a $file ]] && [[ $linecount -gt 0 ]];
 	then
-		linecount=$(generateNum)
-		if [[ -a $file ]] && [[ $linecount -gt 0 ]];
-		then
-			echo -e "$colr    TODOs... $reset"
-			while IFS='' read -r line || [[ -n "$line" ]]; do
-				body=${line#*$pattern}
-				body=${body%$pattern*}
-				num=${line%%$pattern*}
-				pri=${line##*$pattern}
-				priStr=$(returnPriorityStatus $pri)
-				echo -e "$colr $num $reset:$priStr $body"
-			done < "$file"
-		else
-			echo -e "\033[37;44m EMPTY TODOs \033[0m"
-		fi
+		echo -e "$colr    TODOs... $reset"
+		while IFS='' read -r line || [[ -n "$line" ]]; do
+			body=${line#*$pattern}
+			body=${body%$pattern*}
+			num=${line%%$pattern*}
+			pri=${line##*$pattern}
+			priStr=$(returnPriorityStatus $pri)
+			echo -e "$colr $num $reset:$priStr $body"
+		done < "$file"
 	else
-		#echo "Adding to todo list..."
-		#echo "$1"
-		if [[ -a $file ]];
-		then
-			numberNow=$(generateNum) #that number becomes the id
-			echo "$numberNow+++$1+++$PRIORITYIN" >> "$file"
-		else
-			#File does not exist
-			touch "$file"
-			echo "0+++$1+++$PRIORITYIN" > "$file"
-		fi
-		echo "Added to the list..."
+		echo -e "\033[37;44m EMPTY TODOs \033[0m"
 	fi
+else
+	if [[ -a $file ]];
+	then
+		numberNow=$(generateNum)
+		echo "$numberNow+++$1+++$PRIORITYIN" >> "$file"
+	else
+		touch "$file"
+		echo "0+++$1+++$PRIORITYIN" > "$file"
+	fi
+	echo "Added to the list..."
 fi
