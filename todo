@@ -151,7 +151,16 @@ function returnPriorityStatus(){
 		outStr="\033[30;42m LOW \033[0m"
 	fi
 	echo $outStr
-}	
+}
+
+control_c(){
+	if [[ -f  $transfile ]]; then
+		rm $transfile
+	fi
+	exit 1
+}
+trap control_c SIGINT
+
 
 while getopts d:re:p:h option
 do
