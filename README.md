@@ -22,6 +22,13 @@ Priority options (-p):
 - l low L LOW OR 3
 
 ```
+todo -t TODAY "Print out the business report!"
+```
+will add the todo item to the todo list with a Tag of TODAY
+
+Tags can be any sort string, this will allow you to identify special items quickly
+
+```
 todo -e 1
 ```
 will *EDIT* the selected todo item with the matching ID

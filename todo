@@ -5,10 +5,13 @@ numberRegex='^[0-9]+$'
 pattern="+++"
 DEFAULTPRIORITY="NORMAL"
 PRIORITYIN=2
+EMPTYTAG="EMPTY"
+TAGIN="EMPTY"
 
 file="$HOME/.todo"
 transfile="$HOME/.tododel"
 colr="\033[37;45m"
+flsh="\033[1;31;46m" #removed 5
 reset="\033[0m"
 
 function editTicket(){
@@ -16,8 +19,12 @@ function editTicket(){
 	if [[ $1 =~ $numberRegex ]] ; then
 		internalcount=0
 		while IFS='' read -r line || [[ -n "$line" ]]; do
-			body=${line#*$pattern}
-			body=${body%$pattern*}
+			body=${line#*$pattern} #retuns tag++body+++pri
+			body=${body%$pattern*} #returns tag++body
+			body=${body#*$pattern} #returns body
+			tag=${line#*$pattern} #retuns tag++body+++pri
+			tag=${tag%$pattern*} #returns tag++body
+			tag=${tag%$pattern*} #returns tag
 			num=${line%%$pattern*}
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
@@ -30,15 +37,20 @@ function editTicket(){
 				if ! [[ -z $bodyNew ]]; then
 					body=$bodyNew
 				fi
+				echo "Type the new tag for the item... (leave blank to not change)"
+				read tagNew </dev/tty
+				if ! [[ -z $tagNew ]]; then
+					consumeTag $tagNew
+				fi
 				echo "Type priority for the todo item... (leave blank to not change)"
 				read priNew </dev/tty
 				if ! [[ -z $priNew ]]; then
 					consumePriority $priNew
 				fi
-				echo "$internalcount+++$body+++$PRIORITYIN" >> $transfile
+				echo "$internalcount+++$TAGIN+++$body+++$PRIORITYIN" >> $transfile
 			else
 				if ! [[ -z "$line" ]]; then
-					echo "$internalcount+++$body+++$pri" >> $transfile
+					echo "$internalcount+++$tag+++$body+++$pri" >> $transfile
 				fi
 			fi
 			internalcount=$((internalcount + 1))
@@ -60,8 +72,12 @@ function completedTask(){
 	if [[ $1 =~ $numberRegex ]] ; then
 		internalcount=0
 		while IFS='' read -r line || [[ -n "$line" ]]; do
-			body=${line#*$pattern}
-			body=${body%$pattern*}
+			body=${line#*$pattern} #retuns tag++body+++pri
+			body=${body%$pattern*} #returns tag++body
+			body=${body#*$pattern} #returns body
+			tag=${line#*$pattern} #retuns tag++body+++pri
+			tag=${tag%$pattern*} #returns tag++body
+			tag=${tag%$pattern*} #returns tag
 			num=${line%%$pattern*}
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
@@ -70,7 +86,7 @@ function completedTask(){
 				echo -e "$colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
-					echo "$internalcount+++$body+++$pri" >> $transfile
+					echo "$internalcount+++$tag+++$body+++$pri" >> $transfile
 					internalcount=$((internalcount + 1))
 				fi
 			fi
@@ -78,8 +94,12 @@ function completedTask(){
 	else
 		internalcount=0
 		while IFS='' read -r line || [[ -n "$line" ]]; do
-			body=${line#*$pattern}
-			body=${body%$pattern*}
+			body=${line#*$pattern} #retuns tag++body+++pri
+			body=${body%$pattern*} #returns tag++body
+			body=${body#*$pattern} #returns body
+			tag=${line#*$pattern} #retuns tag++body+++pri
+			tag=${tag%$pattern*} #returns tag++body
+			tag=${tag%$pattern*} #returns tag
 			num=${line%%$pattern*}
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
@@ -88,7 +108,7 @@ function completedTask(){
 				echo -e "$colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
-					echo "$internalcount+++$body+++$pri" >> $transfile
+					echo "$internalcount+++$tag+++$body+++$pri" >> $transfile
 					internalcount=$((internalcount + 1))
 				fi
 			fi
@@ -105,6 +125,10 @@ function completedTask(){
 function generateNum(){
 	numberOfLines=$(wc -l < $file)
 	echo $numberOfLines
+}
+
+function consumeTag(){
+	TAGIN=$1
 }
 
 function consumePriority(){
@@ -162,7 +186,7 @@ control_c(){
 trap control_c SIGINT
 
 
-while getopts d:re:p:h option
+while getopts d:re:p:t:h option
 do
 case "${option}"
 in
@@ -181,6 +205,12 @@ e)
 	;;
 p)
 	consumePriority ${OPTARG}
+	;;
+t)
+	#Today flag!
+	#Could be a flash tag insteaed, so -t optarg is a word to tage with e.g. today! / Now!
+	echo "Tagging!"
+	consumeTag ${OPTARG}
 	;;
 h)
 	echo "HELP"
@@ -201,12 +231,26 @@ then
 	then
 		echo -e "$colr    TODOs... $reset"
 		while IFS='' read -r line || [[ -n "$line" ]]; do
-			body=${line#*$pattern}
-			body=${body%$pattern*}
+			#1+++think about doing teaching sessions with next year cohort+++2
+			body=${line#*$pattern} #retuns tag++body+++pri
+			body=${body%$pattern*} #returns tag++body
+			body=${body#*$pattern} #returns body
+			tag=${line#*$pattern} #retuns tag++body+++pri
+			tag=${tag%$pattern*} #returns tag++body
+			tag=${tag%$pattern*} #returns tag
 			num=${line%%$pattern*}
 			pri=${line##*$pattern}
+			#1+++TAG+++think about doing teaching sessions with next year cohort+++2
+			#body=${line#*$pattern} #retuns body+++pri
+			#body=${body%$pattern*} #returns body
+			#num=${line%%$pattern*}
+			#pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
-			echo -e "$colr $num $reset:$priStr $body"
+			if [[ -n $tag ]] && [[ $tag != $EMPTYTAG ]]; then
+				echo -e "$colr $num $reset:$priStr $flsh $tag $reset $body"
+			else
+				echo -e "$colr $num $reset:$priStr $body"
+			fi
 		done < "$file"
 	else
 		echo -e "\033[37;44m EMPTY TODOs \033[0m"
@@ -215,10 +259,10 @@ else
 	if [[ -a $file ]];
 	then
 		numberNow=$(generateNum)
-		echo "$numberNow+++$1+++$PRIORITYIN" >> "$file"
+		echo "$numberNow+++$TAGIN+++$1+++$PRIORITYIN" >> "$file"
 	else
 		touch "$file"
-		echo "0+++$1+++$PRIORITYIN" > "$file"
+		echo "0+++$TAGIN+++$1+++$PRIORITYIN" > "$file"
 	fi
 	echo "Added to the list..."
 fi
