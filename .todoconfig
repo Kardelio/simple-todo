@@ -1,0 +1,3 @@
+borderColorFront=37 #White
+borderColorBack=45 #Purple
+echo "CONFIG FILE READ"

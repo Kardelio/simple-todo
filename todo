@@ -1,6 +1,8 @@
 #!/bin/bash
 #Takes in a single string and opt other e.g. priority
 #and with no args it prints todo list
+source .todoconfig 
+
 numberRegex='^[0-9]+$'
 pattern="+++"
 DEFAULTPRIORITY="NORMAL"
@@ -10,7 +12,7 @@ TAGIN="EMPTY"
 
 file="$HOME/.todo"
 transfile="$HOME/.tododel"
-colr="\033[37;45m"
+colr="\033[${borderColorFront};${borderColorBack}m"
 flsh="\033[1;31;46m" #removed 5
 reset="\033[0m"
 
@@ -41,12 +43,17 @@ function editTicket(){
 				read tagNew </dev/tty
 				if ! [[ -z $tagNew ]]; then
 					consumeTag $tagNew
+				else
+					consumeTag $tag
 				fi
 				echo "Type priority for the todo item... (leave blank to not change)"
 				read priNew </dev/tty
 				if ! [[ -z $priNew ]]; then
 					consumePriority $priNew
+				else
+					consumePriority $pri
 				fi
+				#issue here TAGIN and PRINTIN are using defaults if not set
 				echo "$internalcount+++$TAGIN+++$body+++$PRIORITYIN" >> $transfile
 			else
 				if ! [[ -z "$line" ]]; then
@@ -185,7 +192,6 @@ control_c(){
 }
 trap control_c SIGINT
 
-
 while getopts d:re:p:t:h option
 do
 case "${option}"
@@ -214,6 +220,7 @@ t)
 	;;
 h)
 	echo "HELP"
+	echo "Printing Help..."
 	exit 0
 	;;
 *)

@@ -6,6 +6,11 @@ todo
 with no arguements... will list out all current todo items with description, priorities and ids...
 
 ```
+todo -h
+```
+Will print out the help information for this program
+
+```
 todo "Print out the business report!"
 ```
 will add the todo item to the todo list...
