@@ -1,7 +1,11 @@
 #!/bin/bash
 #Takes in a single string and opt other e.g. priority
 #and with no args it prints todo list
-source .todoconfig 
+if ! [[ -a "$HOME/.todoconfig" ]];then
+	echo -e "\033[30;43mFirst use of todo, copying config to ~/.todoconfig...\033[0m"
+	cp ".todoconfig" "$HOME"
+fi
+source "$HOME/.todoconfig" 
 
 numberRegex='^[0-9]+$'
 pattern="+++"
