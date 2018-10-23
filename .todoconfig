@@ -1,3 +1,6 @@
-borderColorFront=37 #White
-borderColorBack=45 #Purple
+borderColorFront=30
+borderColorBack=47
+tagColorFront=31
+tagColorBack=46
+priorityMap=("1,HIGH,37,41" "2,NORMAL,37,44" "3,LOW,30,42") #id,text,foreground,background 
 # - Priorities array strings, tuples

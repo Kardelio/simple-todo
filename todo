@@ -1,12 +1,10 @@
 #!/bin/bash
-#Takes in a single string and opt other e.g. priority
-#and with no args it prints todo list
+workingDir=$(dirname "$0")
 if ! [[ -a "$HOME/.todoconfig" ]];then
 	echo -e "\033[30;43mFirst use of todo, copying config to ~/.todoconfig...\033[0m"
-	cp ".todoconfig" "$HOME"
+	cp "$workingDir/.todoconfig" "$HOME"
 fi
 source "$HOME/.todoconfig" 
-
 numberRegex='^[0-9]+$'
 pattern="+++"
 DEFAULTPRIORITY="NORMAL"
@@ -17,8 +15,14 @@ TAGIN="EMPTY"
 file="$HOME/.todo"
 transfile="$HOME/.tododel"
 colr="\033[${borderColorFront};${borderColorBack}m"
-flsh="\033[1;31;46m" #removed 5
+flsh="\033[1;${tagColorFront};${tagColorBack}m" #removed 5
 reset="\033[0m"
+
+function resetConfig(){
+	echo "Resetting the CONFIG file"
+	rm "$HOME/.todoconfig"
+	cp "$workingDir/.todoconfig" "$HOME"	
+}
 
 function editTicket(){
 	echo "Editing... $1"
@@ -93,7 +97,7 @@ function completedTask(){
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
 			if [[ $num == $1 ]]; then
-				echo "Deleting ... "
+				echo "Deleting Number: $num..."
 				echo -e "$colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
@@ -115,7 +119,7 @@ function completedTask(){
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
 			if [[ $body =~ $1 ]]; then
-				echo "REG Deleting ... "
+				echo "Deleting Number: $num..."
 				echo -e "$colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
@@ -143,30 +147,36 @@ function consumeTag(){
 }
 
 function consumePriority(){
+	#Here is the issue
 	if [[ $1 =~ $numberRegex ]] ; then
-		if [[ $1 -le 3 ]] ; then
+		if [[ $1 -le "${#priorityMap[@]}" ]] ; then
 			PRIORITYIN=$1
 		else
-			echo "Thats error"
+			echo "Thats error (NaN)"
 			exit 1
 		fi
 	else
-		case "$1"
-		in
-		h|high|H|HIGH)
-			PRIORITYIN=1
-			;;
-		n|norm|normal|N|NORM|NORMAL)
-			PRIORITYIN=2
-			;;
-		l|low|L|LOW)
-			PRIORITYIN=3
-			;;
-		*)
+		didMatchOne=false
+		lowerIn=$(echo $1 | awk '{print tolower($0)}')
+		upperIn=$(echo $1 | awk '{print toupper($0)}')
+		for i in "${priorityMap[@]}"; do 
+			splitText=${i%,*}
+			splitText=${splitText#*,}
+			splitText=${splitText%,*} 
+			if [[ "$1" == "$splitText" ]] || [[ "$lowerIn" ==  "$splitText" ]] || [[ "$upperIn" ==  "$splitText" ]]; then
+				splitFore=${i#*,}
+				splitFore=${splitFore%,*}
+				splitFore=${splitFore#*,}
+				splitBack=${i##*,}
+				splitNum=${i%%,*}
+				PRIORITYIN=$splitNum
+				didMatchOne=true
+			fi
+		done
+		if ! $didMatchOne; then
 			echo "Thats error"
 			exit 1
-			;;
-		esac
+		fi
 	fi
 }
 
@@ -176,15 +186,19 @@ function clearAllTodos(){
 
 function returnPriorityStatus(){
 	outStr=$DEFAULTPRIORITY
-	if [[ $1 == "1" ]];
-	then
-		outStr="\033[37;41m HIGH \033[0m"
-	elif [[ $1 == "2" ]];
-	then
-		outStr="\033[37;44m NORMAL \033[0m"
-	else
-		outStr="\033[30;42m LOW \033[0m"
-	fi
+	for i in "${priorityMap[@]}"; do  
+		splitNum=${i%%,*}
+		if [[ $1 == "$splitNum" ]]; then
+			splitText=${i%,*}
+			splitText=${splitText#*,}
+			splitText=${splitText%,*}
+			splitFore=${i#*,}
+			splitFore=${splitFore%,*}
+			splitFore=${splitFore#*,}
+			splitBack=${i##*,}
+			outStr="\033[${splitFore};${splitBack}m ${splitText} \033[0m"
+		fi
+	done
 	echo $outStr
 }
 
@@ -196,10 +210,14 @@ control_c(){
 }
 trap control_c SIGINT
 
-while getopts d:re:p:t:h option
+while getopts d:rce:p:t:h option
 do
 case "${option}"
 in
+c)
+	resetConfig
+	exit 0
+	;;
 d)
 	completedTask ${OPTARG}
 	exit 0
@@ -217,18 +235,14 @@ p)
 	consumePriority ${OPTARG}
 	;;
 t)
-	#Today flag!
-	#Could be a flash tag insteaed, so -t optarg is a word to tage with e.g. today! / Now!
-	echo "Tagging!"
 	consumeTag ${OPTARG}
 	;;
 h)
 	echo "HELP"
-	echo "Printing Help..."
 	exit 0
 	;;
 *)
-	echo "Error unknown parameter!"
+	echo "Error unknown parameter! Use todo -h to get the available options..."
 	exit 1
 ;;
 esac
@@ -251,11 +265,6 @@ then
 			tag=${tag%$pattern*} #returns tag
 			num=${line%%$pattern*}
 			pri=${line##*$pattern}
-			#1+++TAG+++think about doing teaching sessions with next year cohort+++2
-			#body=${line#*$pattern} #retuns body+++pri
-			#body=${body%$pattern*} #returns body
-			#num=${line%%$pattern*}
-			#pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
 			if [[ -n $tag ]] && [[ $tag != $EMPTYTAG ]]; then
 				echo -e "$colr $num $reset:$priStr $flsh $tag $reset $body"
