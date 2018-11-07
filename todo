@@ -18,6 +18,11 @@ colr="\033[${borderColorFront};${borderColorBack}m"
 flsh="\033[1;${tagColorFront};${tagColorBack}m" #removed 5
 reset="\033[0m"
 
+function printHelp(){
+	echo "Help..."
+	cat "$workingDir/README.md"
+}
+
 function resetConfig(){
 	echo "Resetting the CONFIG file"
 	rm "$HOME/.todoconfig"
@@ -238,7 +243,7 @@ t)
 	consumeTag ${OPTARG}
 	;;
 h)
-	echo "HELP"
+	printHelp
 	exit 0
 	;;
 *)
