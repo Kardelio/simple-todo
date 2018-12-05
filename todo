@@ -85,10 +85,10 @@ function editTicket(){
 	else
 		echo "Only editing using the items ID is enabled at the moment..."
 	fi
+	displayAllTodos
 }
 
 function completedTask(){
-	echo "Completed... $1"
 	if [[ $1 =~ $numberRegex ]] ; then
 		internalcount=0
 		while IFS='' read -r line || [[ -n "$line" ]]; do
@@ -102,8 +102,7 @@ function completedTask(){
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
 			if [[ $num == $1 ]]; then
-				echo "Deleting Number: $num..."
-				echo -e "$colr $num $reset:$priStr $body"
+				echo -e "Deleting... $colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
 					echo "$internalcount+++$tag+++$body+++$pri" >> $transfile
@@ -124,8 +123,7 @@ function completedTask(){
 			pri=${line##*$pattern}
 			priStr=$(returnPriorityStatus $pri)
 			if [[ $body =~ $1 ]]; then
-				echo "Deleting Number: $num..."
-				echo -e "$colr $num $reset:$priStr $body"
+				echo -e "Deleting... $colr $num $reset:$priStr $body"
 			else
 				if ! [[ -z "$line" ]]; then
 					echo "$internalcount+++$tag+++$body+++$pri" >> $transfile
@@ -140,6 +138,7 @@ function completedTask(){
 	else
 		> "$file"
 	fi
+	displayAllTodos
 }
 
 function generateNum(){
@@ -187,6 +186,33 @@ function consumePriority(){
 
 function clearAllTodos(){
 	> "$file"
+}
+
+function displayAllTodos(){
+	linecount=$(generateNum)
+	if [[ -a $file ]] && [[ $linecount -gt 0 ]];
+	then
+		echo -e "$colr    TODOs... $reset"
+		while IFS='' read -r line || [[ -n "$line" ]]; do
+			#1+++think about doing teaching sessions with next year cohort+++2
+			body=${line#*$pattern} #retuns tag++body+++pri
+			body=${body%$pattern*} #returns tag++body
+			body=${body#*$pattern} #returns body
+			tag=${line#*$pattern} #retuns tag++body+++pri
+			tag=${tag%$pattern*} #returns tag++body
+			tag=${tag%$pattern*} #returns tag
+			num=${line%%$pattern*}
+			pri=${line##*$pattern}
+			priStr=$(returnPriorityStatus $pri)
+			if [[ -n $tag ]] && [[ $tag != $EMPTYTAG ]]; then
+				echo -e "$colr $num $reset:$priStr $flsh $tag $reset $body"
+			else
+				echo -e "$colr $num $reset:$priStr $body"
+			fi
+		done < "$file"
+	else
+		echo -e "\033[37;44m EMPTY TODOs \033[0m"
+	fi
 }
 
 function returnPriorityStatus(){
@@ -256,30 +282,7 @@ shift $((OPTIND-1)) #This pushes the parameters out the way and lets the positio
 
 if [[ -z "$1" ]]; 
 then
-	linecount=$(generateNum)
-	if [[ -a $file ]] && [[ $linecount -gt 0 ]];
-	then
-		echo -e "$colr    TODOs... $reset"
-		while IFS='' read -r line || [[ -n "$line" ]]; do
-			#1+++think about doing teaching sessions with next year cohort+++2
-			body=${line#*$pattern} #retuns tag++body+++pri
-			body=${body%$pattern*} #returns tag++body
-			body=${body#*$pattern} #returns body
-			tag=${line#*$pattern} #retuns tag++body+++pri
-			tag=${tag%$pattern*} #returns tag++body
-			tag=${tag%$pattern*} #returns tag
-			num=${line%%$pattern*}
-			pri=${line##*$pattern}
-			priStr=$(returnPriorityStatus $pri)
-			if [[ -n $tag ]] && [[ $tag != $EMPTYTAG ]]; then
-				echo -e "$colr $num $reset:$priStr $flsh $tag $reset $body"
-			else
-				echo -e "$colr $num $reset:$priStr $body"
-			fi
-		done < "$file"
-	else
-		echo -e "\033[37;44m EMPTY TODOs \033[0m"
-	fi
+	displayAllTodos
 else
 	if [[ -a $file ]];
 	then
@@ -290,4 +293,5 @@ else
 		echo "0+++$TAGIN+++$1+++$PRIORITYIN" > "$file"
 	fi
 	echo "Added to the list..."
+	displayAllTodos
 fi
